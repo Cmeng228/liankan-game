@@ -87,7 +87,7 @@ function prepareGame() {
     ended: false
   };
   draw();
-  setMessage(player ? "点击开始游戏后计时。" : "先填写游戏名字。");
+  setMessage(player ? "" : "先填写游戏名字。");
 }
 
 function startGame() {
@@ -96,7 +96,7 @@ function startGame() {
   state.locked = false;
   state.timer = setInterval(tick, 1000);
   draw();
-  setMessage("开局！连击越高，分数越高。");
+  setMessage("");
 }
 
 function makeSolvableGrid(settings) {
