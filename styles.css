@@ -56,8 +56,8 @@ p {
 
 .stats {
   display: grid;
-  grid-template-columns: repeat(3, minmax(86px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(5, minmax(68px, 1fr));
+  gap: 8px;
 }
 
 .stat {
@@ -65,7 +65,7 @@ p {
   border: 1px solid rgba(110, 127, 116, .2);
   border-radius: 8px;
   padding: 8px 10px;
-  min-width: 86px;
+  min-width: 68px;
   box-shadow: 0 8px 24px rgba(28, 37, 32, .06);
 }
 
@@ -217,16 +217,16 @@ button.primary {
   .topbar { align-items: start; gap: 8px; margin-bottom: 8px; }
   h1 { font-size: 28px; }
   p { display: none; }
-  .stats { grid-template-columns: repeat(3, 1fr); }
-  .stat { padding: 6px 8px; min-width: 0; }
-  .stat span { font-size: 12px; }
-  .stat strong { font-size: 18px; }
+  .stats { grid-template-columns: repeat(5, 1fr); gap: 4px; }
+  .stat { padding: 5px 4px; min-width: 0; }
+  .stat span { font-size: 11px; }
+  .stat strong { font-size: 16px; }
   .game-shell { gap: 8px; }
   .panel { grid-template-columns: 86px 1fr; align-items: stretch; padding: 8px; }
   button { min-height: 36px; }
   .message { min-height: 36px; padding: 7px 8px; font-size: 13px; }
   .board-wrap {
-    width: min(100%, calc((100svh - 154px) * 10 / 15));
+    width: min(100%, calc((100svh - 150px) * 10 / 15));
     justify-self: center;
     padding: 6px;
   }
@@ -238,7 +238,7 @@ button.primary {
 
 @media (max-width: 420px) {
   .app { width: calc(100vw - 8px); padding-top: 6px; }
-  .board-wrap { width: min(100%, calc((100svh - 146px) * 10 / 15)); padding: 4px; }
+  .board-wrap { width: min(100%, calc((100svh - 142px) * 10 / 15)); padding: 4px; }
   #lineLayer { inset: 4px; }
   .board { gap: 1px; }
   .tile { padding: 1px; border-radius: 4px; }

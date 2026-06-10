@@ -25,10 +25,22 @@ const config = {
   kinds: tileImages.length
 };
 
+const scoring = {
+  pair: 100,
+  comboStep: 20,
+  comboMax: 200,
+  timeBonusPerSecond: 15,
+  moveBonusTarget: 120,
+  moveBonusPerStep: 20,
+  reshufflePenalty: 150
+};
+
 const els = {
   board: document.querySelector("#board"),
   canvas: document.querySelector("#lineLayer"),
   time: document.querySelector("#time"),
+  score: document.querySelector("#score"),
+  combo: document.querySelector("#combo"),
   moves: document.querySelector("#moves"),
   left: document.querySelector("#left"),
   message: document.querySelector("#message"),
@@ -46,12 +58,15 @@ function startGame() {
     moves: 0,
     left: config.rows * config.cols,
     seconds: config.seconds,
+    score: 0,
+    combo: 0,
+    reshuffles: 0,
     timer: null,
     locked: false
   };
   state.timer = setInterval(tick, 1000);
   draw();
-  setMessage("开局！没有可连牌时会自动重排。");
+  setMessage("开局！连击越高，分数越高。");
 }
 
 function makeSolvableGrid(settings) {
@@ -119,6 +134,7 @@ function choose(r, c) {
   const path = findPath(first, current);
   if (path && state.grid[first.r][first.c] === state.grid[r][c]) {
     state.locked = true;
+    addPairScore();
     drawLine(path);
     setTimeout(() => {
       state.grid[first.r][first.c] = null;
@@ -129,20 +145,38 @@ function choose(r, c) {
       clearLine();
       draw();
       if (!state.left) {
-        setMessage("全部消除，通关！");
-        endGame("你赢了！");
+        finishGame();
       } else if (!findAnyPair()) {
         reshuffleUntilPlayable();
       } else {
-        setMessage("连上了。");
+        setMessage(`连上了。当前 ${state.combo} 连击。`);
       }
     }, 240);
   } else {
-    setMessage("这两个还连不上。");
+    state.combo = 0;
     state.selected = current;
+    setMessage("这两个还连不上，连击已中断。");
     markSelection();
   }
   updateStats();
+}
+
+function addPairScore() {
+  state.combo++;
+  const comboBonus = Math.min((state.combo - 1) * scoring.comboStep, scoring.comboMax);
+  state.score += scoring.pair + comboBonus;
+}
+
+function finishGame() {
+  const timeBonus = state.seconds * scoring.timeBonusPerSecond;
+  const moveBonus = Math.max(0, (scoring.moveBonusTarget - state.moves) * scoring.moveBonusPerStep);
+  state.score = Math.max(0, state.score + timeBonus + moveBonus);
+  setMessage(`全部消除！时间奖励 ${timeBonus}，步数奖励 ${moveBonus}。`);
+  endGame(`通关！${state.score} 分`);
+}
+
+function applyPenalty(points) {
+  state.score = Math.max(0, state.score - points);
 }
 
 function findPath(a, b) {
@@ -267,8 +301,11 @@ function reshuffleUntilPlayable() {
   } while (values.length > 2 && !findAnyPairIn(nextGrid) && tries < 120);
   state.grid = nextGrid;
   state.selected = null;
+  state.combo = 0;
+  state.reshuffles++;
+  applyPenalty(scoring.reshufflePenalty);
   draw();
-  setMessage(findAnyPair() ? "没有可连的牌，已自动重排。" : "自动重排后仍暂无可连，继续试试边缘。");
+  setMessage(findAnyPair() ? "没有可连的牌，已自动重排，扣 150 分。" : "自动重排后仍暂无可连，继续试试边缘。");
 }
 
 function findAnyPairIn(grid) {
@@ -282,11 +319,12 @@ function findAnyPairIn(grid) {
 function tick() {
   state.seconds--;
   updateStats();
-  if (state.seconds <= 0) endGame("时间到");
+  if (state.seconds <= 0) endGame(`时间到！${Math.max(0, state.score)} 分`);
 }
 
 function endGame(text) {
   clearInterval(state.timer);
+  state.score = Math.max(0, state.score);
   state.locked = true;
   draw();
   const overlay = document.createElement("div");
@@ -303,6 +341,8 @@ function markSelection() {
 
 function updateStats() {
   els.time.textContent = `${String(Math.floor(state.seconds / 60)).padStart(2, "0")}:${String(state.seconds % 60).padStart(2, "0")}`;
+  els.score.textContent = Math.max(0, state.score);
+  els.combo.textContent = state.combo;
   els.moves.textContent = state.moves;
   els.left.textContent = state.left;
 }
