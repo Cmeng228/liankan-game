@@ -1,3 +1,7 @@
+const SUPABASE_URL = "https://xgbiulcnekihaqqzhsdl.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_HK935jzpHd7KsXLJ9Ct0Jw_n6jjdkxA";
+const SCORE_TABLE = "liankan_scores";
+
 const tileImages = [
   "BP_story_01_17_knight.png",
   "BP_story_01_28_admirer.png",
@@ -44,12 +48,28 @@ const els = {
   moves: document.querySelector("#moves"),
   left: document.querySelector("#left"),
   message: document.querySelector("#message"),
-  newGame: document.querySelector("#newGame")
+  playerName: document.querySelector("#playerName"),
+  startGame: document.querySelector("#startGame"),
+  newGame: document.querySelector("#newGame"),
+  nameModal: document.querySelector("#nameModal"),
+  nameForm: document.querySelector("#nameForm"),
+  nameInput: document.querySelector("#nameInput"),
+  resultModal: document.querySelector("#resultModal"),
+  finalScore: document.querySelector("#finalScore"),
+  resultTaunt: document.querySelector("#resultTaunt"),
+  playAgain: document.querySelector("#playAgain"),
+  topScores: document.querySelector("#topScores"),
+  allScoresModal: document.querySelector("#allScoresModal"),
+  allScores: document.querySelector("#allScores"),
+  showAllScores: document.querySelector("#showAllScores"),
+  closeScores: document.querySelector("#closeScores")
 };
 
 let state = {};
+let player = "";
+let leaderboard = [];
 
-function startGame() {
+function prepareGame() {
   clearInterval(state.timer);
   state = {
     ...config,
@@ -62,8 +82,18 @@ function startGame() {
     combo: 0,
     reshuffles: 0,
     timer: null,
-    locked: false
+    locked: true,
+    started: false,
+    ended: false
   };
+  draw();
+  setMessage(player ? "点击开始游戏后计时。" : "先填写游戏名字。");
+}
+
+function startGame() {
+  if (!player || state.started) return;
+  state.started = true;
+  state.locked = false;
   state.timer = setInterval(tick, 1000);
   draw();
   setMessage("开局！连击越高，分数越高。");
@@ -105,7 +135,7 @@ function draw() {
       img.draggable = false;
       tile.append(img);
     }
-    tile.disabled = !value || state.locked;
+    tile.disabled = !value || state.locked || !state.started || state.ended;
     tile.dataset.r = r;
     tile.dataset.c = c;
     tile.addEventListener("click", () => choose(r, c));
@@ -116,7 +146,7 @@ function draw() {
 }
 
 function choose(r, c) {
-  if (state.locked || !state.grid[r][c]) return;
+  if (state.locked || !state.started || state.ended || !state.grid[r][c]) return;
   const current = { r, c };
   if (state.selected && sameCell(state.selected, current)) {
     state.selected = null;
@@ -172,7 +202,7 @@ function finishGame() {
   const moveBonus = Math.max(0, (scoring.moveBonusTarget - state.moves) * scoring.moveBonusPerStep);
   state.score = Math.max(0, state.score + timeBonus + moveBonus);
   setMessage(`全部消除！时间奖励 ${timeBonus}，步数奖励 ${moveBonus}。`);
-  endGame(`通关！${state.score} 分`);
+  endGame("通关");
 }
 
 function applyPenalty(points) {
@@ -239,7 +269,6 @@ function drawLine(path) {
   ctx.clearRect(0, 0, els.canvas.width, els.canvas.height);
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
-
   ctx.strokeStyle = "rgba(255, 255, 255, .92)";
   ctx.lineWidth = 10;
   ctx.shadowColor = "rgba(13, 143, 114, .2)";
@@ -247,7 +276,6 @@ function drawLine(path) {
   ctx.beginPath();
   points.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y));
   ctx.stroke();
-
   ctx.shadowColor = "rgba(34, 160, 107, .38)";
   ctx.shadowBlur = 10;
   ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--line").trim();
@@ -255,7 +283,6 @@ function drawLine(path) {
   ctx.beginPath();
   points.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y));
   ctx.stroke();
-
   ctx.shadowBlur = 0;
   ctx.fillStyle = "#ffffff";
   points.forEach(p => {
@@ -317,21 +344,35 @@ function findAnyPairIn(grid) {
 }
 
 function tick() {
+  if (!state.started || state.ended) return;
   state.seconds--;
   updateStats();
-  if (state.seconds <= 0) endGame(`时间到！${Math.max(0, state.score)} 分`);
+  if (state.seconds <= 0) endGame("时间到");
 }
 
-function endGame(text) {
+async function endGame(title) {
   clearInterval(state.timer);
   state.score = Math.max(0, state.score);
   state.locked = true;
+  state.ended = true;
   draw();
-  const overlay = document.createElement("div");
-  overlay.className = "overlay";
-  overlay.innerHTML = `<div><strong>${text}</strong><button class="primary">再来一局</button></div>`;
-  overlay.querySelector("button").addEventListener("click", startGame);
-  document.querySelector(".board-wrap").append(overlay);
+  const score = state.score;
+  const bestBefore = leaderboard[0]?.score ?? -1;
+  const isFirst = score > bestBefore;
+  await saveScore({
+    player_name: player,
+    score,
+    moves: state.moves,
+    seconds_left: state.seconds,
+    reshuffles: state.reshuffles
+  });
+  await loadLeaderboard();
+  els.finalScore.textContent = `${score} 分`;
+  els.resultTaunt.textContent = isFirst
+    ? "行吧，也就暂时第一，一会就被人超过了。"
+    : "你做小孩那桌吧，你也太弱了吧。";
+  document.querySelector("#resultTitle").textContent = title;
+  els.resultModal.classList.remove("hidden");
 }
 
 function markSelection() {
@@ -367,10 +408,116 @@ function shuffleArray(array) {
   return array;
 }
 
-els.newGame.addEventListener("click", startGame);
+function supabaseReady() {
+  return Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
+}
+
+async function supabaseRequest(path, options = {}) {
+  const url = `${SUPABASE_URL.replace(/\/$/, "")}/rest/v1/${path}`;
+  const headers = {
+    apikey: SUPABASE_ANON_KEY,
+    Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+    "Content-Type": "application/json",
+    ...options.headers
+  };
+  const response = await fetch(url, { ...options, headers });
+  if (!response.ok) throw new Error(`Supabase ${response.status}`);
+  if (response.status === 204) return null;
+  return response.json();
+}
+
+async function loadLeaderboard() {
+  try {
+    if (supabaseReady()) {
+      leaderboard = await supabaseRequest(`${SCORE_TABLE}?select=player_name,score,moves,seconds_left,created_at&order=score.desc,created_at.asc&limit=50`);
+    } else {
+      leaderboard = JSON.parse(localStorage.getItem("liankan_scores") || "[]");
+    }
+  } catch {
+    leaderboard = JSON.parse(localStorage.getItem("liankan_scores") || "[]");
+  }
+  leaderboard.sort((a, b) => b.score - a.score);
+  renderLeaderboard();
+}
+
+async function saveScore(record) {
+  const payload = { ...record, score: Math.max(0, record.score) };
+  if (supabaseReady()) {
+    await supabaseRequest(SCORE_TABLE, {
+      method: "POST",
+      headers: { Prefer: "return=minimal" },
+      body: JSON.stringify(payload)
+    });
+    return;
+  }
+  const local = JSON.parse(localStorage.getItem("liankan_scores") || "[]");
+  local.push({ ...payload, created_at: new Date().toISOString() });
+  localStorage.setItem("liankan_scores", JSON.stringify(local.slice(-100)));
+}
+
+function renderLeaderboard() {
+  renderScoreList(els.topScores, leaderboard.slice(0, 3));
+  renderScoreList(els.allScores, leaderboard);
+}
+
+function renderScoreList(target, rows) {
+  target.innerHTML = "";
+  if (!rows.length) {
+    const item = document.createElement("li");
+    item.className = "empty-score";
+    item.textContent = "还没有成绩。";
+    target.append(item);
+    return;
+  }
+  rows.forEach((row, index) => {
+    const item = document.createElement("li");
+    item.innerHTML = `<span>${index + 1}. ${escapeHtml(row.player_name)}</span><strong>${Math.max(0, row.score)}</strong>`;
+    target.append(item);
+  });
+}
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, char => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "\"": "&quot;",
+    "'": "&#039;"
+  }[char]));
+}
+
+els.nameForm.addEventListener("submit", event => {
+  event.preventDefault();
+  player = els.nameInput.value.trim().slice(0, 16);
+  if (!player) return;
+  localStorage.setItem("liankan_player", player);
+  els.playerName.textContent = player;
+  els.startGame.disabled = false;
+  els.nameModal.classList.add("hidden");
+  prepareGame();
+});
+
+els.startGame.addEventListener("click", startGame);
+els.newGame.addEventListener("click", prepareGame);
+els.playAgain.addEventListener("click", () => {
+  els.resultModal.classList.add("hidden");
+  prepareGame();
+});
+els.showAllScores.addEventListener("click", () => els.allScoresModal.classList.remove("hidden"));
+els.closeScores.addEventListener("click", () => els.allScoresModal.classList.add("hidden"));
 window.addEventListener("resize", () => {
   clearLine();
   sizeCanvas();
 });
 
-startGame();
+player = localStorage.getItem("liankan_player") || "";
+if (player) {
+  els.nameInput.value = player;
+  els.playerName.textContent = player;
+  els.startGame.disabled = false;
+} else {
+  els.nameModal.classList.remove("hidden");
+  setTimeout(() => els.nameInput.focus(), 50);
+}
+prepareGame();
+loadLeaderboard();
