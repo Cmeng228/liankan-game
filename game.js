@@ -17,10 +17,12 @@ const tileImages = [
   "BP_story_01_63_FemaleWerewolves.png",
   "BP_story_01_64_AwakeningDreamer.png"
 ];
-const configs = {
-  easy: { rows: 6, cols: 8, seconds: 210, kinds: 12 },
-  normal: { rows: 8, cols: 10, seconds: 180, kinds: 16 },
-  hard: { rows: 10, cols: 12, seconds: 210, kinds: 17 }
+
+const config = {
+  rows: 18,
+  cols: 11,
+  seconds: 180,
+  kinds: tileImages.length
 };
 
 const els = {
@@ -30,36 +32,41 @@ const els = {
   moves: document.querySelector("#moves"),
   left: document.querySelector("#left"),
   message: document.querySelector("#message"),
-  newGame: document.querySelector("#newGame"),
-  hint: document.querySelector("#hint"),
-  shuffle: document.querySelector("#shuffle"),
-  difficulty: document.querySelector("#difficulty")
+  newGame: document.querySelector("#newGame")
 };
 
 let state = {};
 
 function startGame() {
-  const config = configs[els.difficulty.value];
+  clearInterval(state.timer);
   state = {
     ...config,
-    grid: makeGrid(config),
+    grid: makeSolvableGrid(config),
     selected: null,
     moves: 0,
     left: config.rows * config.cols,
     seconds: config.seconds,
-    timer: state.timer,
+    timer: null,
     locked: false
   };
-  clearInterval(state.timer);
   state.timer = setInterval(tick, 1000);
   draw();
-  setMessage("开局！先找边缘和相邻的对子。");
+  setMessage("开局！没有可连牌时会自动重排。");
+}
+
+function makeSolvableGrid(settings) {
+  let grid = makeGrid(settings);
+  let guard = 0;
+  while (!findAnyPairIn(grid) && guard < 100) {
+    grid = makeGrid(settings);
+    guard++;
+  }
+  return grid;
 }
 
 function makeGrid({ rows, cols, kinds }) {
-  const total = rows * cols;
   const values = [];
-  for (let i = 0; i < total / 2; i++) {
+  for (let i = 0; i < rows * cols / 2; i++) {
     const image = tileImages[i % kinds];
     values.push(image, image);
   }
@@ -72,13 +79,13 @@ function makeGrid({ rows, cols, kinds }) {
 function draw() {
   els.board.innerHTML = "";
   els.board.style.gridTemplateColumns = `repeat(${state.cols}, minmax(0, 1fr))`;
-  els.board.style.maxWidth = `${state.cols * 66}px`;
+  els.board.style.maxWidth = `${state.cols * 54}px`;
   state.grid.forEach((row, r) => row.forEach((value, c) => {
     const tile = document.createElement("button");
     tile.className = `tile${value ? "" : " empty"}`;
     if (value) {
       const img = document.createElement("img");
-      img.src = `assets/${value}`;
+      img.src = `./assets/${value}`;
       img.alt = "";
       img.draggable = false;
       tile.append(img);
@@ -90,7 +97,7 @@ function draw() {
     els.board.append(tile);
   }));
   updateStats();
-  sizeCanvas();
+  requestAnimationFrame(sizeCanvas);
 }
 
 function choose(r, c) {
@@ -106,6 +113,7 @@ function choose(r, c) {
     markSelection();
     return;
   }
+
   state.moves++;
   const first = state.selected;
   const path = findPath(first, current);
@@ -120,10 +128,15 @@ function choose(r, c) {
       state.locked = false;
       clearLine();
       draw();
-      setMessage(state.left ? "连上了，漂亮。" : "全部消除，通关！");
-      if (!state.left) endGame("你赢了！");
-      else if (!findAnyPair()) reshuffle("没有可连的牌，已自动重排。");
-    }, 260);
+      if (!state.left) {
+        setMessage("全部消除，通关！");
+        endGame("你赢了！");
+      } else if (!findAnyPair()) {
+        reshuffleUntilPlayable();
+      } else {
+        setMessage("连上了。");
+      }
+    }, 240);
   } else {
     setMessage("这两个还连不上。");
     state.selected = current;
@@ -138,7 +151,7 @@ function findPath(a, b) {
   const cols = state.cols + 2;
   const start = { r: a.r + 1, c: a.c + 1 };
   const target = { r: b.r + 1, c: b.c + 1 };
-  const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+  const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
   const queue = [{ ...start, dir: -1, turns: 0, path: [start] }];
   const seen = new Map();
 
@@ -185,14 +198,13 @@ function drawLine(path) {
   sizeCanvas();
   const ctx = els.canvas.getContext("2d");
   const rect = els.board.getBoundingClientRect();
-  const points = path.map(({ r, c }) => {
-    const x = (c + .5) * rect.width / state.cols;
-    const y = (r + .5) * rect.height / state.rows;
-    return { x, y };
-  });
+  const points = path.map(({ r, c }) => ({
+    x: (c + 0.5) * rect.width / state.cols,
+    y: (r + 0.5) * rect.height / state.rows
+  }));
   ctx.clearRect(0, 0, els.canvas.width, els.canvas.height);
   ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--line").trim();
-  ctx.lineWidth = 5;
+  ctx.lineWidth = 4;
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
   ctx.beginPath();
@@ -225,37 +237,26 @@ function findAnyPair() {
   return null;
 }
 
-function showHint() {
-  const pair = findAnyPair();
-  if (!pair) {
-    reshuffle("暂时无解，已重排。");
-    return;
-  }
-  setMessage("这对可以连。");
-  document.querySelectorAll(".tile").forEach(tile => tile.classList.remove("hint"));
-  pair.forEach(({ r, c }) => tileAt(r, c).classList.add("hint"));
-}
-
-function reshuffle(message = "已重排。") {
+function reshuffleUntilPlayable() {
   const values = state.grid.flat().filter(Boolean);
-  let nextGrid;
+  let nextGrid = state.grid;
   let tries = 0;
   do {
     const shuffled = shuffleArray([...values]);
     nextGrid = state.grid.map(row => row.map(cell => cell ? shuffled.pop() : null));
     tries++;
-  } while (values.length > 2 && !findAnyPairIn(nextGrid) && tries < 80);
+  } while (values.length > 2 && !findAnyPairIn(nextGrid) && tries < 120);
   state.grid = nextGrid;
   state.selected = null;
   draw();
-  setMessage(message);
+  setMessage(findAnyPair() ? "没有可连的牌，已自动重排。" : "自动重排后仍暂无可连，继续试试边缘。");
 }
 
 function findAnyPairIn(grid) {
-  const oldGrid = state.grid;
-  state.grid = grid;
+  const oldState = state;
+  state = { ...state, grid, rows: config.rows, cols: config.cols };
   const pair = findAnyPair();
-  state.grid = oldGrid;
+  state = oldState;
   return pair;
 }
 
@@ -308,9 +309,6 @@ function shuffleArray(array) {
 }
 
 els.newGame.addEventListener("click", startGame);
-els.hint.addEventListener("click", showHint);
-els.shuffle.addEventListener("click", () => reshuffle());
-els.difficulty.addEventListener("change", startGame);
 window.addEventListener("resize", () => {
   clearLine();
   sizeCanvas();
