@@ -19,8 +19,8 @@ const tileImages = [
 ];
 
 const config = {
-  rows: 18,
-  cols: 11,
+  rows: 15,
+  cols: 10,
   seconds: 180,
   kinds: tileImages.length
 };
@@ -79,7 +79,7 @@ function makeGrid({ rows, cols, kinds }) {
 function draw() {
   els.board.innerHTML = "";
   els.board.style.gridTemplateColumns = `repeat(${state.cols}, minmax(0, 1fr))`;
-  els.board.style.maxWidth = `${state.cols * 54}px`;
+  els.board.style.setProperty("--cols", state.cols);
   state.grid.forEach((row, r) => row.forEach((value, c) => {
     const tile = document.createElement("button");
     tile.className = `tile${value ? "" : " empty"}`;
@@ -203,13 +203,32 @@ function drawLine(path) {
     y: (r + 0.5) * rect.height / state.rows
   }));
   ctx.clearRect(0, 0, els.canvas.width, els.canvas.height);
-  ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--line").trim();
-  ctx.lineWidth = 4;
   ctx.lineCap = "round";
   ctx.lineJoin = "round";
+
+  ctx.strokeStyle = "rgba(255, 255, 255, .92)";
+  ctx.lineWidth = 10;
+  ctx.shadowColor = "rgba(13, 143, 114, .2)";
+  ctx.shadowBlur = 8;
   ctx.beginPath();
   points.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y));
   ctx.stroke();
+
+  ctx.shadowColor = "rgba(34, 160, 107, .38)";
+  ctx.shadowBlur = 10;
+  ctx.strokeStyle = getComputedStyle(document.documentElement).getPropertyValue("--line").trim();
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  points.forEach((p, i) => i ? ctx.lineTo(p.x, p.y) : ctx.moveTo(p.x, p.y));
+  ctx.stroke();
+
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = "#ffffff";
+  points.forEach(p => {
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+  });
 }
 
 function clearLine() {
