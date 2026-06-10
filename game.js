@@ -1,25 +1,25 @@
-const SUPABASE_URL = "https://xgbiulcnekihaqqzhsdl.supabase.co";
+﻿const SUPABASE_URL = "https://xgbiulcnekihaqqzhsdl.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_HK935jzpHd7KsXLJ9Ct0Jw_n6jjdkxA";
 const SCORE_TABLE = "liankan_scores";
 
 const tileImages = [
-  "BP_story_01_17_knight.png",
-  "BP_story_01_28_admirer.png",
-  "BP_story_01_29_trader.png",
-  "BP_story_01_48_awakenseer.png",
-  "BP_story_01_49_perfumer.png",
-  "BP_story_01_50_awakenwolvesking.png",
-  "BP_story_01_51_awakeninghiddenwolf.png",
-  "BP_story_01_52_magicmirrorgirl.png",
-  "BP_story_01_53_AwakeningAdmirer.png",
-  "BP_story_01_56_AwakeningWitch.png",
-  "BP_story_01_57_AwakeningWerewolfBeauty.png",
-  "BP_story_01_58_AwakeningHunter.png",
-  "BP_story_01_59_AwakeningGargoyles.png",
-  "BP_story_01_61_AwakeningWhitewolvesking.png",
-  "BP_story_01_62_AwakeningGuard.png",
-  "BP_story_01_63_FemaleWerewolves.png",
-  "BP_story_01_64_AwakeningDreamer.png"
+  "BP_story_01_17_knight.jpg",
+  "BP_story_01_28_admirer.jpg",
+  "BP_story_01_29_trader.jpg",
+  "BP_story_01_48_awakenseer.jpg",
+  "BP_story_01_49_perfumer.jpg",
+  "BP_story_01_50_awakenwolvesking.jpg",
+  "BP_story_01_51_awakeninghiddenwolf.jpg",
+  "BP_story_01_52_magicmirrorgirl.jpg",
+  "BP_story_01_53_AwakeningAdmirer.jpg",
+  "BP_story_01_56_AwakeningWitch.jpg",
+  "BP_story_01_57_AwakeningWerewolfBeauty.jpg",
+  "BP_story_01_58_AwakeningHunter.jpg",
+  "BP_story_01_59_AwakeningGargoyles.jpg",
+  "BP_story_01_61_AwakeningWhitewolvesking.jpg",
+  "BP_story_01_62_AwakeningGuard.jpg",
+  "BP_story_01_63_FemaleWerewolves.jpg",
+  "BP_story_01_64_AwakeningDreamer.jpg"
 ];
 
 const config = {
@@ -202,7 +202,7 @@ function finishGame() {
   const moveBonus = Math.max(0, (scoring.moveBonusTarget - state.moves) * scoring.moveBonusPerStep);
   state.score = Math.max(0, state.score + timeBonus + moveBonus);
   setMessage(`全部消除！时间奖励 ${timeBonus}，步数奖励 ${moveBonus}。`);
-  endGame("通关");
+  endGame("閫氬叧");
 }
 
 function applyPenalty(points) {
