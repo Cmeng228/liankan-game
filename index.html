@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>连连看</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="app">
+    <section class="topbar" aria-label="游戏状态">
+      <div>
+        <h1>连连看</h1>
+        <p>找到可以用不超过两次转弯连起来的一对。</p>
+      </div>
+      <div class="stats">
+        <div class="stat"><span>时间</span><strong id="time">03:00</strong></div>
+        <div class="stat"><span>步数</span><strong id="moves">0</strong></div>
+        <div class="stat"><span>剩余</span><strong id="left">0</strong></div>
+      </div>
+    </section>
+
+    <section class="game-shell">
+      <aside class="panel">
+        <button id="newGame" class="primary">新局</button>
+        <button id="hint">提示</button>
+        <button id="shuffle">重排</button>
+        <label class="select-row">
+          难度
+          <select id="difficulty">
+            <option value="easy">轻松</option>
+            <option value="normal" selected>标准</option>
+            <option value="hard">紧凑</option>
+          </select>
+        </label>
+        <div class="message" id="message">准备好了。</div>
+      </aside>
+
+      <div class="board-wrap">
+        <canvas id="lineLayer" aria-hidden="true"></canvas>
+        <div id="board" class="board" aria-label="连连看棋盘"></div>
+      </div>
+    </section>
+  </main>
+  <script src="game.js"></script>
+</body>
+</html>
