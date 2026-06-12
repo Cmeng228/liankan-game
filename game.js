@@ -471,9 +471,15 @@ function renderScoreList(target, rows) {
   }
   rows.forEach((row, index) => {
     const item = document.createElement("li");
-    item.innerHTML = `<span>${index + 1}. ${escapeHtml(row.player_name)}</span><strong>${Math.max(0, row.score)}</strong>`;
+    item.innerHTML = `<span>${index + 1}. ${escapeHtml(row.player_name)} · ${scoreAgeHours(row.created_at)}小时</span><strong>${Math.max(0, row.score)}</strong>`;
     target.append(item);
   });
+}
+
+function scoreAgeHours(createdAt) {
+  const createdTime = new Date(createdAt).getTime();
+  if (!Number.isFinite(createdTime)) return 0;
+  return Math.max(0, Math.floor((Date.now() - createdTime) / 3600000));
 }
 
 function escapeHtml(value) {
