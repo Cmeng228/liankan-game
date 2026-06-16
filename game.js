@@ -31,12 +31,11 @@ const config = {
 
 const scoring = {
   pair: 100,
-  comboStep: 20,
-  comboMax: 200,
-  timeBonusPerSecond: 15,
-  moveBonusTarget: 120,
-  moveBonusPerStep: 20,
-  reshufflePenalty: 150
+  comboMultiplier: 15,
+  speedDivisor: 3,
+  mistakePenalty: 80,
+  timeBonusPerSecond: 30,
+  reshufflePenalty: 200
 };
 
 const els = {
@@ -62,7 +61,10 @@ const els = {
   allScoresModal: document.querySelector("#allScoresModal"),
   allScores: document.querySelector("#allScores"),
   showAllScores: document.querySelector("#showAllScores"),
-  closeScores: document.querySelector("#closeScores")
+  closeScores: document.querySelector("#closeScores"),
+  rulesModal: document.querySelector("#rulesModal"),
+  showRules: document.querySelector("#showRules"),
+  closeRules: document.querySelector("#closeRules")
 };
 
 let state = {};
@@ -184,8 +186,9 @@ function choose(r, c) {
     }, 240);
   } else {
     state.combo = 0;
+    applyPenalty(scoring.mistakePenalty);
     state.selected = current;
-    setMessage("这两个还连不上，连击已中断。");
+    setMessage("这两个还连不上，扣 80 分，连击已中断。");
     markSelection();
   }
   updateStats();
@@ -193,16 +196,16 @@ function choose(r, c) {
 
 function addPairScore() {
   state.combo++;
-  const comboBonus = Math.min((state.combo - 1) * scoring.comboStep, scoring.comboMax);
-  state.score += scoring.pair + comboBonus;
+  const comboBonus = state.combo * scoring.comboMultiplier;
+  const speedBonus = Math.floor(state.seconds / scoring.speedDivisor);
+  state.score += scoring.pair + comboBonus + speedBonus;
 }
 
 function finishGame() {
   const timeBonus = state.seconds * scoring.timeBonusPerSecond;
-  const moveBonus = Math.max(0, (scoring.moveBonusTarget - state.moves) * scoring.moveBonusPerStep);
-  state.score = Math.max(0, state.score + timeBonus + moveBonus);
-  setMessage(`全部消除！时间奖励 ${timeBonus}，步数奖励 ${moveBonus}。`);
-  endGame("閫氬叧");
+  state.score = Math.max(0, state.score + timeBonus);
+  setMessage(`全部消除！通关奖励 ${timeBonus}。`);
+  endGame("通关");
 }
 
 function applyPenalty(points) {
@@ -511,6 +514,8 @@ els.playAgain.addEventListener("click", () => {
 });
 els.showAllScores.addEventListener("click", () => els.allScoresModal.classList.remove("hidden"));
 els.closeScores.addEventListener("click", () => els.allScoresModal.classList.add("hidden"));
+els.showRules.addEventListener("click", () => els.rulesModal.classList.remove("hidden"));
+els.closeRules.addEventListener("click", () => els.rulesModal.classList.add("hidden"));
 window.addEventListener("resize", () => {
   clearLine();
   sizeCanvas();

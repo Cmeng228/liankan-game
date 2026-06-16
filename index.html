@@ -34,6 +34,7 @@
         </div>
         <button id="startGame" class="primary" disabled>开始游戏</button>
         <button id="newGame">新局</button>
+        <button id="showRules" type="button">积分规则</button>
         <div class="message" id="message">先填写游戏名字。</div>
       </aside>
 
@@ -66,6 +67,22 @@
       <h2 id="allScoresTitle">全部排行榜</h2>
       <ol id="allScores" class="score-list full"></ol>
       <button id="closeScores" class="primary" type="button">关闭</button>
+    </div>
+  </div>
+
+  <div id="rulesModal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="rulesTitle">
+    <div class="modal-card rules-card">
+      <h2 id="rulesTitle">积分规则</h2>
+      <ul>
+        <li>每消除一对：基础 100 分。</li>
+        <li>连击分：连击数 x 15，不封顶。</li>
+        <li>速度分：当前剩余秒数 / 3，向下取整。</li>
+        <li>点错一次：扣 80 分，连击清零。</li>
+        <li>自动重排：扣 200 分，连击清零。</li>
+        <li>通关奖励：剩余秒数 x 30。</li>
+        <li>最终分数最低为 0 分。</li>
+      </ul>
+      <button id="closeRules" class="primary" type="button">知道了</button>
     </div>
   </div>
 
