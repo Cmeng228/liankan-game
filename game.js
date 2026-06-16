@@ -64,6 +64,7 @@ const els = {
   closeScores: document.querySelector("#closeScores"),
   rulesModal: document.querySelector("#rulesModal"),
   showRules: document.querySelector("#showRules"),
+  showRulesFromName: document.querySelector("#showRulesFromName"),
   closeRules: document.querySelector("#closeRules")
 };
 
@@ -514,7 +515,16 @@ els.playAgain.addEventListener("click", () => {
 });
 els.showAllScores.addEventListener("click", () => els.allScoresModal.classList.remove("hidden"));
 els.closeScores.addEventListener("click", () => els.allScoresModal.classList.add("hidden"));
-els.showRules.addEventListener("click", () => els.rulesModal.classList.remove("hidden"));
+els.showRules.addEventListener("click", event => {
+  event.preventDefault();
+  event.stopPropagation();
+  els.rulesModal.classList.remove("hidden");
+});
+els.showRulesFromName.addEventListener("click", event => {
+  event.preventDefault();
+  event.stopPropagation();
+  els.rulesModal.classList.remove("hidden");
+});
 els.closeRules.addEventListener("click", () => els.rulesModal.classList.add("hidden"));
 window.addEventListener("resize", () => {
   clearLine();
